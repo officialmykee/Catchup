@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Input</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      height: 100vh;
+      background: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-area { flex: 1; }
+
+    .input-bar {
+      width: 100%;
+      padding: 8px 16px;
+      background: #ffffff;
+      border-top: 1px solid #e5e5e5;
+    }
+
+    .input-wrapper {
+      position: relative;
+      background: #ebebeb;
+      border-radius: 18px;
+    }
+
+    .input-pill {
+      display: block;
+      width: 100%;
+      background: transparent;
+      border-radius: 18px;
+      min-height: 36px;
+      max-height: 160px;
+      overflow-y: auto;
+      /* right padding keeps text from going under icon */
+      padding: 9px 86px 9px 18px;
+      font-size: 16px;
+      color: #1c1c1e;
+      line-height: 1.4;
+      outline: none;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .input-pill:empty::before {
+      content: attr(data-placeholder);
+      color: #8e8e93;
+      pointer-events: none;
+    }
+
+    .input-pill::-webkit-scrollbar { width: 4px; }
+    .input-pill::-webkit-scrollbar-thumb {
+      background: #c7c7cc;
+      border-radius: 2px;
+    }
+
+    .emoji-btn {
+      position: absolute;
+      /* flush to the right inner edge of the pill */
+      right: 0px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 77px;
+      height: 77px;
+      cursor: pointer;
+      opacity: 0.75;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .emoji-btn svg {
+      width: 77px;
+      height: 77px;
+    }
+
+    .emoji-btn:hover { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <div class="chat-area"></div>
+
+  <div class="input-bar">
+    <div class="input-wrapper">
+      <div
+        class="input-pill"
+        contenteditable="true"
+        role="textbox"
+        aria-multiline="true"
+        aria-label="Message"
+        data-placeholder="Message #..."
+      ></div>
+      <div class="emoji-btn" title="Emoji">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><g stroke-width="0"><path d="M488.5 341.1c-56 4.8-103.1 37.2-126.8 86.9-5.7 12-9.1 22.4-11.9 35.9-3.2 15.2-3.1 43.1.1 57.6 10.8 48.8 40.1 86.3 83.5 107.1 22.6 10.8 42.5 15.4 67.1 15.4 24 0 46.5-5.4 68-16.2 16.4-8.2 25.9-15.1 39.6-28.7 23.8-23.9 36.4-47.9 43-82.6 2.2-11.6 1.7-39.8-.9-52.8-5.3-25.5-15.7-47.9-31.3-67.2-6.1-7.5-19-20.2-23.6-23.2-1.5-1-3.5-2.4-4.3-3.2-2.5-2.4-14.6-9.9-21.7-13.4-23.9-11.9-54.7-17.9-80.8-15.6m-55.2 119.5c3.6 1.9 5.2 3.4 8.7 8.3 3.2 4.6 3.5 14.9.5 20-5.5 9.3-16.5 12.7-26 8.1-11.9-5.8-14.3-23.6-4.3-32.6 5.9-5.4 14.8-7 21.1-3.8m148.8-.2c4.1 1.7 9.4 7.1 10.8 10.9.6 1.6 1.1 5.4 1.1 8.6 0 19.9-26.3 26.4-36.5 9-3.2-5.5-2.8-14.3 1-20.4 5.1-8.3 15.1-11.7 23.6-8.1m-131.8 56.7c2.8 1.4 5.6 4.9 5.7 6.9 0 1.4 5 5 11.5 8.3 6 3 15.8 5.6 25.3 6.8 12.5 1.5 26.1-.3 37.4-5 9.6-4 12.5-6.3 14.5-11.3 2.8-7 10.3-8.9 15.4-3.9 3.7 3.8 4 9.2.7 12.2-5.5 4.9-13.5 11.2-15.5 12.2-2.1.9-2.3 1.7-2.3 9.1 0 6.4-.5 9.2-2.4 13.1-4.4 9.5-12.9 14.4-22.9 13.1-9.1-1.2-15.8-7.3-20.2-18.3l-2.4-5.7-8.3-1.2c-13.7-2-25.4-6.9-36-15-3.1-2.4-6.4-4.4-7.3-4.4-3.1 0-6.5-4.6-6.5-8.9 0-6.6 7.4-11 13.3-8"/><path d="M524.5 551.9c-1.1.5-4.6 1.1-7.7 1.5-3.2.4-5.8 1-5.8 1.4 0 2 4.3 7.3 7.1 8.7 5.3 2.8 8.6-.1 10.4-9.3.7-3.4-.1-3.8-4-2.3"/></g><path fill="#005" d="M410 492.4c0 .2.8 1 1.8 1.7 1.5 1.3 1.6 1.2.3-.4s-2.1-2.1-2.1-1.3"/><path fill="#555" d="M587.9 493.7c-1.3 1.6-1.2 1.7.4.4s2.1-2.1 1.3-2.1c-.2 0-1 .8-1.7 1.7M446 534.4c0 .2.8 1 1.8 1.7 1.5 1.3 1.6 1.2.3-.4s-2.1-2.1-2.1-1.3"/></svg>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
+
