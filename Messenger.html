@@ -103,6 +103,18 @@
     gap: 14px;
   }
 
+  .date-separator {
+    align-self: center;
+    background: rgba(90, 100, 110, 0.55);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 14px;
+    backdrop-filter: blur(4px);
+    margin: 4px 0;
+  }
+
   .row {
     display: flex;
     align-items: flex-end;
@@ -347,6 +359,8 @@
 
   <div class="chat">
     <div class="chat-inner">
+    <div class="date-separator">June 20</div>
+
     <div class="row received">
       <div class="avatar">
         <img src="https://i.ibb.co/V0VmxZZs/Screenshot-20260530-223839.jpg" alt="avatar">
@@ -437,6 +451,63 @@
 
     inputPill.addEventListener('input', updateEmptyState);
     updateEmptyState();
+
+    // Track last message date to show date separator only after 24 hours
+    let lastMessageDate = new Date('2026-06-20'); // matches the existing hardcoded date
+
+    function formatTime(date) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatDate(date) {
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      if (date.toDateString() === today.toDateString()) return 'Today';
+      if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+      return date.toLocaleDateString([], { month: 'long', day: 'numeric' });
+    }
+
+    function sendMessage() {
+      const text = inputPill.textContent.replace(/\u200B/g, '').trim();
+      if (!text) return;
+
+      const now = new Date();
+      const chatInner = document.querySelector('.chat-inner');
+
+      // Show date separator if more than 24 hours since last message
+      const hoursDiff = (now - lastMessageDate) / (1000 * 60 * 60);
+      if (hoursDiff >= 24) {
+        const sep = document.createElement('div');
+        sep.className = 'date-separator';
+        sep.textContent = formatDate(now);
+        chatInner.appendChild(sep);
+      }
+
+      lastMessageDate = now;
+
+      // Create bubble
+      const row = document.createElement('div');
+      row.className = 'row sent';
+      row.innerHTML = `
+        <div class="bubble sent">${text} <span class="time">${formatTime(now)}</span></div>
+        <div class="avatar"></div>
+      `;
+      chatInner.appendChild(row);
+
+      inputPill.innerHTML = '';
+      updateEmptyState();
+      scrollChatToBottom();
+    }
+
+    document.querySelector('.send-btn').addEventListener('click', sendMessage);
+
+    inputPill.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
   </script>
 
 </body>
