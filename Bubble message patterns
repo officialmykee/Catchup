@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhatsApp Bubble — Smart Timestamp</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: #0b141a;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 48px;
+  }
+
+  h2 {
+    color: #8696a0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+
+  .demo-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  /* ─── Base Bubble ─────────────────────────────────────── */
+  .bubble {
+    position: relative;
+    background: #005c4b;
+    color: #e9edef;
+    font-size: 14.2px;
+    line-height: 1.45;
+    border-radius: 7.5px 7.5px 0 7.5px;
+    padding: 6px 7px 8px 9px;
+    max-width: 320px;
+    word-break: break-word;
+  }
+
+  /* ─── Telegram-style bottom-right tail (SVG) ─────────── */
+  .bubble::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: -8px;
+    width: 9px;
+    height: 13px;
+    background: #005c4b;
+    clip-path: polygon(0 0, 0 100%, 100% 100%);
+  }
+
+  /* ─────────────────────────────────────────────────────── */
+  /* MODE 1 — INLINE TIMESTAMP                              */
+  /* fits on the same line as the last word of text         */
+  /* ─────────────────────────────────────────────────────── */
+  .bubble.mode-inline .inner {
+    display: inline;
+  }
+
+  .bubble.mode-inline .ts-inline {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 3px;
+    margin-left: 5px;
+    vertical-align: bottom;
+    white-space: nowrap;
+    color: rgba(233,237,239,.75);
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  /* ─────────────────────────────────────────────────────── */
+  /* MODE 2 — RESERVED-SPACE INLINE TIMESTAMP               */
+  /* invisible spacer pushes text so timestamp hugs right   */
+  /* ─────────────────────────────────────────────────────── */
+  .bubble.mode-reserved {
+    padding-bottom: 6px;
+  }
+
+  .bubble.mode-reserved .ts-spacer {
+    /* invisible placeholder same width as the stamp */
+    display: inline-block;
+    width: 62px;  /* match .ts-float width */
+    height: 1px;
+    margin-left: 4px;
+  }
+
+  .bubble.mode-reserved .ts-float {
+    position: absolute;
+    right: 7px;
+    bottom: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+    color: rgba(233,237,239,.75);
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  /* ─────────────────────────────────────────────────────── */
+  /* MODE 3 — WRAPPED TIMESTAMP                             */
+  /* sits on its own line, right-aligned                    */
+  /* ─────────────────────────────────────────────────────── */
+  .bubble.mode-wrapped .ts-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 3px;
+    margin-top: 2px;
+    color: rgba(233,237,239,.75);
+    font-size: 11px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* ─── SVG tick icons ──────────────────────────────────── */
+  .tick { display: inline-block; flex-shrink: 0; }
+
+  /* ─── Page label ─────────────────────────────────────── */
+  .label {
+    color: #8696a0;
+    font-size: 11px;
+    text-align: right;
+    margin-top: 3px;
+    letter-spacing: .3px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- DEMO 1 — INLINE                                        -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="demo-group">
+  <h2>Mode 1 · Inline</h2>
+
+  <div class="bubble mode-inline">
+    <span class="inner">Hey!</span><span class="ts-inline">
+      10:41 PM
+      <!-- double blue tick -->
+      <svg class="tick" width="16" height="11" viewBox="0 0 16 11" fill="none">
+        <path d="M1 5.5L4.5 9 10 2" stroke="#53bdeb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5 5.5L8.5 9 14 2" stroke="#53bdeb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+  </div>
+  <div class="label">Inline — timestamp follows last word</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- DEMO 2 — RESERVED SPACE (wrapping text, no own line)  -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="demo-group">
+  <h2>Mode 2 · Reserved-space Inline</h2>
+
+  <div class="bubble mode-reserved">
+    This message is a bit longer and wraps to a second line but the timestamp still stays right at the edge.<span class="ts-spacer"></span>
+    <span class="ts-float">
+      10:41 PM
+      <svg class="tick" width="16" height="11" viewBox="0 0 16 11" fill="none">
+        <path d="M1 5.5L4.5 9 10 2" stroke="#53bdeb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5 5.5L8.5 9 14 2" stroke="#53bdeb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+  </div>
+  <div class="label">Spacer reserves room · timestamp floats to right edge</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- DEMO 3 — WRAPPED (own line)                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="demo-group">
+  <h2>Mode 3 · Wrapped</h2>
+
+  <div class="bubble mode-wrapped">
+    <div>
+      This is a very long message that fills the bubble completely and leaves absolutely no horizontal room even after reserving space for the timestamp, so it gets its own dedicated line.
+    </div>
+    <div class="ts-row">
+      10:41 PM
+      <svg class="tick" width="16" height="11" viewBox="0 0 16 11" fill="none">
+        <path d="M1 5.5L4.5 9 10 2" stroke="#53bdeb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5 5.5L8.5 9 14 2" stroke="#53bdeb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+  <div class="label">Timestamp on its own right-aligned row</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- DEMO 4 — SINGLE TICK (sent, unread)                   -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="demo-group">
+  <h2>Bonus · Single Tick (sent)</h2>
+
+  <div class="bubble mode-inline">
+    <span class="inner">On my way 🚗</span><span class="ts-inline">
+      10:44 PM
+      <svg class="tick" width="9" height="11" viewBox="0 0 9 11" fill="none">
+        <path d="M1 5.5L3.8 8.5 8 2" stroke="rgba(233,237,239,.75)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+  </div>
+  <div class="label">Single grey tick — delivered to server</div>
+</div>
+
+</body>
+</html>
+
