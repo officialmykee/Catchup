@@ -105,13 +105,13 @@
 
   .date-separator {
     align-self: center;
-    background: rgba(90, 100, 110, 0.55);
-    color: #fff;
+    background: #ffffff;
+    color: #555;
     font-size: 13px;
     font-weight: 600;
     padding: 5px 14px;
     border-radius: 14px;
-    backdrop-filter: blur(4px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
     margin: 4px 0;
   }
 
@@ -145,17 +145,58 @@
     border-radius: 22px;
     font-size: 15px;
     color: #000;
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    white-space: nowrap;
     background: #fff;
     box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    max-width: 280px;
+    word-break: break-word;
   }
 
   .bubble .time {
     font-size: 10px;
     color: #666;
+  }
+
+  /* ── Timestamp layout modes ───────────────────────────── */
+
+  /* Mode 1: inline — timestamp sits right after the last word */
+  .bubble.mode-inline {
+    white-space: nowrap;
+  }
+  .bubble.mode-inline .time-inline {
+    display: inline-flex;
+    align-items: baseline;
+    margin-left: 6px;
+    font-size: 10px;
+    color: #666;
+    white-space: nowrap;
+  }
+
+  /* Mode 2: reserved-space — text wraps, invisible spacer reserves
+     room on the last line so the timestamp floats at the bottom-right */
+  .bubble.mode-reserved {
+    padding-bottom: 8px;
+  }
+  .bubble.mode-reserved .time-spacer {
+    display: inline-block;
+    height: 1px;
+  }
+  .bubble.mode-reserved .time-float {
+    position: absolute;
+    right: 13px;
+    bottom: 8px;
+    font-size: 10px;
+    color: #666;
+    white-space: nowrap;
+  }
+
+  /* Mode 3: wrapped — timestamp gets its own right-aligned row */
+  .bubble.mode-wrapped .time-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 2px;
+    font-size: 10px;
+    color: #666;
+    white-space: nowrap;
   }
 
   .bubble.received { border-bottom-left-radius: 4px; }
@@ -365,15 +406,11 @@
       <div class="avatar">
         <img src="https://i.ibb.co/V0VmxZZs/Screenshot-20260530-223839.jpg" alt="avatar">
       </div>
-      <div class="bubble received">
-        Hi <span class="time">12:59 PM</span>
-      </div>
+      <div class="bubble received mode-inline">Hi<span class="time-inline">12:59 PM</span></div>
     </div>
 
     <div class="row sent">
-      <div class="bubble sent">
-        Yo <span class="time">12:59 PM</span>
-      </div>
+      <div class="bubble sent mode-inline">Yo<span class="time-inline">12:59 PM</span></div>
       <div class="avatar"></div>
     </div>
     </div>
@@ -468,6 +505,88 @@
       return date.toLocaleDateString([], { month: 'long', day: 'numeric' });
     }
 
+    const BUBBLE_MAX_CONTENT_WIDTH = 280 - 26; // bubble max-width minus left+right padding
+    const BUBBLE_FONT = '15px -apple-system, "Helvetica Neue", sans-serif';
+    const TIME_FONT = '10px -apple-system, "Helvetica Neue", sans-serif';
+    const TIME_GAP = 6;
+
+    function measureTextWidth(text, font) {
+      const span = document.createElement('span');
+      span.style.position = 'absolute';
+      span.style.visibility = 'hidden';
+      span.style.whiteSpace = 'nowrap';
+      span.style.font = font;
+      span.textContent = text;
+      document.body.appendChild(span);
+      const width = span.getBoundingClientRect().width;
+      document.body.removeChild(span);
+      return width;
+    }
+
+    function measureWrappedText(text) {
+      const div = document.createElement('div');
+      div.style.position = 'absolute';
+      div.style.visibility = 'hidden';
+      div.style.whiteSpace = 'normal';
+      div.style.wordBreak = 'break-word';
+      div.style.font = BUBBLE_FONT;
+      div.style.maxWidth = BUBBLE_MAX_CONTENT_WIDTH + 'px';
+      div.style.width = 'max-content';
+      div.textContent = text;
+      document.body.appendChild(div);
+
+      const range = document.createRange();
+      range.selectNodeContents(div);
+      const rects = range.getClientRects();
+      const lastRect = rects[rects.length - 1];
+      const result = {
+        lineCount: rects.length,
+        lastLineWidth: lastRect ? lastRect.width : 0,
+        bubbleContentWidth: div.getBoundingClientRect().width
+      };
+      document.body.removeChild(div);
+      return result;
+    }
+
+    // Decides which of the three timestamp layouts (inline / reserved-space /
+    // wrapped) fits a given message, and returns the bubble's inner HTML.
+    function buildBubbleInner(text, timeStr) {
+      const tsWidth = measureTextWidth(timeStr, TIME_FONT);
+      const { lineCount, lastLineWidth, bubbleContentWidth } = measureWrappedText(text);
+      const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      if (lineCount <= 1) {
+        // Single line: does the timestamp fit right after it without
+        // exceeding the bubble's max content width?
+        if (lastLineWidth + TIME_GAP + tsWidth <= BUBBLE_MAX_CONTENT_WIDTH) {
+          return {
+            mode: 'mode-inline',
+            html: `${escaped}<span class="time-inline">${timeStr}</span>`
+          };
+        }
+        // Single line but adding the timestamp would overflow — wrap it.
+        return {
+          mode: 'mode-wrapped',
+          html: `<div>${escaped}</div><div class="time-row">${timeStr}</div>`
+        };
+      }
+
+      // Multi-line: see if the timestamp fits in the remaining space on
+      // the last line (reserved-space mode); otherwise give it its own row.
+      if (lastLineWidth + TIME_GAP + tsWidth <= bubbleContentWidth) {
+        const spacerWidth = Math.max(0, tsWidth + TIME_GAP);
+        return {
+          mode: 'mode-reserved',
+          html: `${escaped}<span class="time-spacer" style="width:${spacerWidth}px;"></span><span class="time-float">${timeStr}</span>`
+        };
+      }
+
+      return {
+        mode: 'mode-wrapped',
+        html: `<div>${escaped}</div><div class="time-row">${timeStr}</div>`
+      };
+    }
+
     function sendMessage() {
       const text = inputPill.textContent.replace(/\u200B/g, '').trim();
       if (!text) return;
@@ -475,9 +594,10 @@
       const now = new Date();
       const chatInner = document.querySelector('.chat-inner');
 
-      // Show date separator if more than 24 hours since last message
-      const hoursDiff = (now - lastMessageDate) / (1000 * 60 * 60);
-      if (hoursDiff >= 24) {
+      // Show date separator only when the calendar day has actually
+      // changed since the last message (WhatsApp-style), not just
+      // because 24 hours have elapsed.
+      if (now.toDateString() !== lastMessageDate.toDateString()) {
         const sep = document.createElement('div');
         sep.className = 'date-separator';
         sep.textContent = formatDate(now);
@@ -487,10 +607,11 @@
       lastMessageDate = now;
 
       // Create bubble
+      const { mode, html } = buildBubbleInner(text, formatTime(now));
       const row = document.createElement('div');
       row.className = 'row sent';
       row.innerHTML = `
-        <div class="bubble sent">${text} <span class="time">${formatTime(now)}</span></div>
+        <div class="bubble sent ${mode}">${html}</div>
         <div class="avatar"></div>
       `;
       chatInner.appendChild(row);
@@ -512,4 +633,5 @@
 
 </body>
 </html>
+
 
