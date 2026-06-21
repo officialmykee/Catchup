@@ -152,12 +152,70 @@
   }
 
   .bubble.sent {
-    background: #d1ecf9;
+    background: #ffffff;
   }
 
   .bubble .time {
     font-size: 10px;
     color: #666;
+  }
+
+
+  /* ── Reply quote block ───────────────────────────────── */
+  /* Bubble keeps its normal padding all around — quote sits inside with its own margin */
+  .reply-quote {
+    display: flex;
+    align-items: stretch;
+    background: rgba(0,0,0,0.07);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 5px; /* gap between quote and message text */
+    cursor: pointer;
+  }
+
+  .bubble.sent .reply-quote {
+    background: rgba(0,0,0,0.07);
+  }
+
+  .reply-accent {
+    width: 4px;
+    flex-shrink: 0;
+    background: #25a244;
+    border-radius: 0; /* accent is flush with left inner edge of quote */
+  }
+
+  .bubble.sent .reply-accent {
+    background: #3a8fb5;
+  }
+
+  .reply-body {
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .reply-author {
+    font-size: 12px;
+    font-weight: 700;
+    color: #25a244;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bubble.sent .reply-author {
+    color: #3a8fb5;
+  }
+
+  .reply-text {
+    font-size: 12.5px;
+    color: #555;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* ── Timestamp layout modes ───────────────────────────── */
@@ -217,7 +275,7 @@
   .bubble.sent .time-inline,
   .bubble.sent .time-float,
   .bubble.sent .time-row {
-    color: #5b8fa8;
+    color: #666;
   }
 
   .bubble.sent { border-bottom-right-radius: 4px; }
@@ -228,7 +286,7 @@
     width: 0; height: 0;
     border-style: solid;
     border-width: 0 0 12px 10px;
-    border-color: transparent transparent transparent #d1ecf9;
+    border-color: transparent transparent transparent #ffffff;
   }
 
   .input-bar {
@@ -420,9 +478,24 @@
     </div>
 
     <div class="row sent">
-      <div class="bubble sent mode-inline">Yo<span class="time-inline" style="color:#5b8fa8">12:59 PM</span></div>
+      <div class="bubble sent mode-inline">Yo<span class="time-inline" >12:59 PM</span></div>
       <div class="avatar"></div>
     </div>
+
+    <div class="row sent">
+      <div class="bubble sent mode-reserved">
+        <div class="reply-quote">
+          <div class="reply-accent"></div>
+          <div class="reply-body">
+            <span class="reply-author">Enyinnaya</span>
+            <span class="reply-text">How are you doing my friend</span>
+          </div>
+        </div>
+        Bro<span class="time-spacer" style="width:52px;display:inline-block;height:1px;"></span><span class="time-float">01:00 PM</span>
+      </div>
+      <div class="avatar"></div>
+    </div>
+
     </div>
   </div>
 
