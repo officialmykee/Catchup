@@ -162,14 +162,13 @@
 
 
   /* ── Reply quote block ───────────────────────────────── */
-  /* Bubble keeps its normal padding all around — quote sits inside with its own margin */
   .reply-quote {
     display: flex;
     align-items: stretch;
     background: rgba(0,0,0,0.07);
     border-radius: 10px;
     overflow: hidden;
-    margin-bottom: 5px; /* gap between quote and message text */
+    margin-bottom: 5px;
     cursor: pointer;
   }
 
@@ -181,7 +180,7 @@
     width: 4px;
     flex-shrink: 0;
     background: #25a244;
-    border-radius: 0; /* accent is flush with left inner edge of quote */
+    border-radius: 0;
   }
 
   .bubble.sent .reply-accent {
@@ -220,7 +219,6 @@
 
   /* ── Timestamp layout modes ───────────────────────────── */
 
-  /* Mode 1: inline — timestamp sits right after the last word */
   .bubble.mode-inline {
     white-space: nowrap;
   }
@@ -233,8 +231,6 @@
     white-space: nowrap;
   }
 
-  /* Mode 2: reserved-space — text wraps, invisible spacer reserves
-     room on the last line so the timestamp floats at the bottom-right */
   .bubble.mode-reserved {
     padding-bottom: 8px;
   }
@@ -251,7 +247,6 @@
     white-space: nowrap;
   }
 
-  /* Mode 3: wrapped — timestamp gets its own right-aligned row */
   .bubble.mode-wrapped .time-row {
     display: flex;
     justify-content: flex-end;
@@ -480,6 +475,22 @@
     <div class="row sent">
       <div class="bubble sent mode-inline">Yo<span class="time-inline" >12:59 PM</span></div>
       <div class="avatar"></div>
+    </div>
+
+    <div class="row received">
+      <div class="avatar">
+        <img src="https://i.ibb.co/V0VmxZZs/Screenshot-20260530-223839.jpg" alt="avatar">
+      </div>
+      <div class="bubble received mode-reserved">
+        <div class="reply-quote">
+          <div class="reply-accent"></div>
+          <div class="reply-body">
+            <span class="reply-author">You</span>
+            <span class="reply-text">Bro</span>
+          </div>
+        </div>
+        How are you doing my friend<span class="time-spacer" style="width:52px;display:inline-block;height:1px;"></span><span class="time-float">01:01 PM</span>
+      </div>
     </div>
 
     <div class="row sent">
@@ -799,5 +810,6 @@
 
 </body>
 </html>
+
 
 
