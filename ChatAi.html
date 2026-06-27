@@ -104,7 +104,7 @@
     }
 
     .ai-actions {
-      display: flex;
+      display: none;
       align-items: center;
       gap: 14px;
       margin-top: 10px;
@@ -342,6 +342,73 @@
     }
     .btn-save:hover { background: #3a7af0; }
 
+    /* Markdown rendered content */
+    .ai-text h1, .ai-text h2, .ai-text h3 {
+      font-weight: 700;
+      margin-top: 16px;
+      margin-bottom: 6px;
+      color: #111;
+      line-height: 1.4;
+    }
+    .ai-text h1 { font-size: 18px; }
+    .ai-text h2 { font-size: 16px; }
+    .ai-text h3 { font-size: 15px; }
+
+    .ai-text p {
+      margin-bottom: 10px;
+      font-size: 15px;
+      color: #222;
+      line-height: 1.6;
+    }
+
+    .ai-text ul, .ai-text ol {
+      margin: 8px 0 12px 20px;
+    }
+    .ai-text ul { list-style: disc; }
+    .ai-text ol { list-style: decimal; }
+
+    .ai-text li {
+      font-size: 15px;
+      color: #222;
+      line-height: 1.6;
+      margin-bottom: 6px;
+    }
+
+    .ai-text strong { font-weight: 700; color: #111; }
+    .ai-text em { font-style: italic; }
+
+    .ai-text a {
+      color: #4a8cff;
+      text-decoration: none;
+    }
+    .ai-text a:hover { text-decoration: underline; }
+
+    .ai-text hr {
+      border: none;
+      border-top: 1px solid #eee;
+      margin: 14px 0;
+    }
+
+    .ai-text code {
+      background: #f4f4f4;
+      border-radius: 4px;
+      padding: 2px 5px;
+      font-size: 13px;
+      font-family: monospace;
+    }
+
+    .ai-text pre {
+      background: #f4f4f4;
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    .ai-text pre code {
+      background: none;
+      padding: 0;
+    }
+
     /* Dimmed retry */
     .btn-retry-disabled {
       opacity: 0.35;
@@ -384,7 +451,7 @@
       </div>
       <div class="ai-response">
         <div class="ai-label" id="ai-label">Cleainput is Reading...</div>
-        <div class="ai-text" id="ai-text" style="display:none">I'm doing great, thank you for asking! What can I do for you today?</div>
+        <div class="ai-text" id="ai-text" style="display:none" data-raw="I'm doing great, thank you for asking! What can I do for you today?">I'm doing great, thank you for asking! What can I do for you today?</div>
         <div class="ai-actions">
           <!-- Retry -->
           <button aria-label="Retry" id="retry-btn" class="btn-retry-disabled">
@@ -457,7 +524,32 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
   <script>
+    // === Smart markdown renderer ===
+    // Detects if response is research/detailed and renders markdown,
+    // otherwise shows plain text like a casual chat reply.
+    function isResearchResponse(text) {
+      var signals = 0;
+      if (/#{1,3}\s/.test(text)) signals += 3;           // has headings
+      if (/\*\*[^*]+\*\*/.test(text)) signals += 2;      // has bold
+      if (/^\s*[-*]\s/m.test(text)) signals += 2;        // has bullet list
+      if (/^\s*\d+\.\s/m.test(text)) signals += 2;       // has numbered list
+      if (text.split('\n').length > 6) signals += 1;     // multi-line
+      if (text.length > 300) signals += 1;               // long response
+      return signals >= 3;
+    }
+
+    function renderAIResponse(text) {
+      var el = document.getElementById('ai-text');
+      if (isResearchResponse(text)) {
+        el.innerHTML = marked.parse(text);
+      } else {
+        // Plain casual — just escape HTML and show as-is
+        el.textContent = text;
+      }
+    }
+
     // Playful thinking animation
     const label = document.getElementById('ai-label');
     const aiText = document.getElementById('ai-text');
@@ -480,9 +572,11 @@
       label.innerHTML = 'Executed';
       label.className = 'ai-label';
       setTimeout(() => {
+        var rawText = aiText.dataset.raw || aiText.textContent;
+        renderAIResponse(rawText);
         aiText.style.display = '';
         aiText.classList.add('visible');
-        aiActions.style.display = '';
+        aiActions.style.display = 'flex';
         setTimeout(() => aiActions.classList.add('visible'), 100);
       }, 300);
     }
