@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeepSeek Search UI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      height: 100vh;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .chat-bar-wrapper {
+      width: 100%;
+      padding: 12px 16px 0 16px;
+      background: #ffffff;
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+
+    /* AI response */
+    .ai-response {
+      width: 100%;
+      margin-top: 20px;
+    }
+
+    .ai-label {
+      font-size: 13px;
+      color: #aaa;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.4s;
+    }
+
+    .ai-label .state-icon {
+      font-size: 15px;
+      display: inline-block;
+    }
+
+    .ai-label .dot-wave {
+      display: inline-flex;
+      gap: 3px;
+      align-items: center;
+    }
+
+    .ai-label .dot-wave span {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #aaa;
+      display: inline-block;
+      animation: none;
+      opacity: 0.3;
+    }
+
+    @keyframes dotBounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
+      40% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    .ai-label.active .dot-wave span:nth-child(1) { animation: dotBounce 1s ease-in-out infinite 0s; }
+    .ai-label.active .dot-wave span:nth-child(2) { animation: dotBounce 1s ease-in-out infinite 0.2s; }
+    .ai-label.active .dot-wave span:nth-child(3) { animation: dotBounce 1s ease-in-out infinite 0.4s; }
+
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .ai-text.visible {
+      animation: fadeSlideIn 0.5s ease forwards;
+    }
+
+    .ai-actions.visible {
+      animation: fadeSlideIn 0.4s ease 0.2s forwards;
+      opacity: 0;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.8); opacity: 0; }
+      70% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .ai-text {
+      font-size: 15px;
+      color: #222;
+      line-height: 1.6;
+    }
+
+    .ai-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .ai-actions button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.15s;
+    }
+    .ai-actions button:hover { opacity: 0.6; }
+
+    /* Message area */
+    .message-area {
+      flex: 1;
+      padding: 70px 16px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      overflow-y: auto;
+    }
+
+    .message-bubble {
+      background: #ffffff;
+      color: #111;
+      border-radius: 18px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.10);
+      padding: 10px 16px;
+      font-size: 15px;
+      white-space: nowrap;
+      display: inline-block;
+      line-height: 1.5;
+    }
+
+    .message-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+      padding-right: 4px;
+    }
+
+    .message-actions button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: #999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s;
+    }
+    .message-actions button:hover { color: #555; }
+
+    /* Header */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 10;
+    }
+
+    .btn-hamburger {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-hamburger:hover { background: #e5e5e5; }
+
+    /* Input pill */
+    .input-pill {
+      background: #ffffff;
+      border-radius: 28px;
+      padding: 14px 18px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.10);
+    }
+
+    .input-pill [contenteditable] {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 15.5px;
+      color: #111;
+      outline: none;
+      caret-color: #4a8cff;
+      word-break: break-word;
+      white-space: pre-wrap;
+      max-height: 140px;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+
+    .input-pill [contenteditable]:empty::before {
+      content: attr(data-placeholder);
+      color: #a0a0a0;
+      pointer-events: none;
+      display: block;
+    }
+
+    /* Toolbar row */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #ffffff;
+      border: none;
+      border-radius: 20px;
+      padding: 7px 14px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.10);
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #222;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .chip:hover { background: #f5f5f5; }
+    .chip:active { background: #ebebeb; }
+
+    .chip svg {
+      flex-shrink: 0;
+    }
+
+    /* Spacer pushes send to the right */
+    .spacer { flex: 1; }
+
+    /* Plus button */
+    .btn-plus {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #555;
+      transition: background 0.15s;
+    }
+    .btn-plus:hover { background: #e5e5e5; }
+
+    /* Send button */
+    .btn-send {
+      width: 48px;
+      height: 38px;
+      border-radius: 19px;
+      background: #4a8cff;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(74,140,255,0.35);
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+    .btn-send:hover {
+      background: #3a7af0;
+      box-shadow: 0 3px 12px rgba(74,140,255,0.45);
+    }
+    .btn-send:active { background: #2b6bdf; }
+
+    /* Edit overlay on bubble */
+    .bubble-edit-container { display: none; width: 100%; }
+    .bubble-edit-box {
+      width: 100%;
+      border: 2px solid #4a8cff;
+      border-radius: 16px;
+      padding: 12px 16px;
+      font-size: 15px;
+      color: #111;
+      outline: none;
+      font-family: inherit;
+      line-height: 1.5;
+      resize: none;
+      background: #fff;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.10);
+    }
+    .bubble-edit-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .btn-cancel {
+      background: #f0f0f0;
+      border: none;
+      border-radius: 20px;
+      padding: 7px 18px;
+      font-size: 14px;
+      cursor: pointer;
+      color: #333;
+    }
+    .btn-cancel:hover { background: #e5e5e5; }
+    .btn-save {
+      background: #4a8cff;
+      border: none;
+      border-radius: 20px;
+      padding: 7px 18px;
+      font-size: 14px;
+      cursor: pointer;
+      color: #fff;
+      font-weight: 500;
+    }
+    .btn-save:hover { background: #3a7af0; }
+
+    /* Dimmed retry */
+    .btn-retry-disabled {
+      opacity: 0.35;
+      cursor: not-allowed !important;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <button class="btn-hamburger" aria-label="Menu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="3" y1="6" x2="21" y2="6" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+        <line x1="3" y1="12" x2="21" y2="12" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+        <line x1="3" y1="18" x2="21" y2="18" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- Message area -->
+  <div class="message-area">
+    <div style="display:flex; flex-direction:column; align-items:flex-end; width:100%;">
+      <div class="message-bubble" id="user-bubble">Hey</div>
+      <div class="message-actions">
+        <button aria-label="Copy" id="bubble-copy-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 11C6 8.17157 6 6.75736 6.87868 5.87868C7.75736 5 9.17157 5 12 5H15C17.8284 5 19.2426 5 20.1213 5.87868C21 6.75736 21 8.17157 21 11V16C21 18.8284 21 20.2426 20.1213 21.1213C19.2426 22 17.8284 22 15 22H12C9.17157 22 7.75736 22 6.87868 21.1213C6 20.2426 6 18.8284 6 16V11Z" stroke="#aaa" stroke-width="1.5"></path><path d="M6 19C4.34315 19 3 17.6569 3 16V10C3 6.22876 3 4.34315 4.17157 3.17157C5.34315 2 7.22876 2 11 2H15C16.6569 2 18 3.34315 18 5" stroke="#aaa" stroke-width="1.5"></path></svg>
+        </button>
+        <button aria-label="Edit" id="bubble-edit-btn">
+          <svg width="18" height="18" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" fill="none"><path fill="#aaa" fill-rule="evenodd" d="M15.198 3.52a1.612 1.612 0 012.223 2.336L6.346 16.421l-2.854.375 1.17-3.272L15.197 3.521zm3.725-1.322a3.612 3.612 0 00-5.102-.128L3.11 12.238a1 1 0 00-.253.388l-1.8 5.037a1 1 0 001.072 1.328l4.8-.63a1 1 0 00.56-.267L18.8 7.304a3.612 3.612 0 00.122-5.106zM12 17a1 1 0 100 2h6a1 1 0 100-2h-6z"></path></svg>
+        </button>
+      </div>
+      <div class="bubble-edit-container" id="bubble-edit-container">
+        <textarea class="bubble-edit-box" id="bubble-edit-textarea" rows="2">Hey</textarea>
+        <div class="bubble-edit-actions">
+          <button class="btn-cancel" id="bubble-cancel-btn">Cancel</button>
+          <button class="btn-save" id="bubble-save-btn">Send</button>
+        </div>
+      </div>
+      <div class="ai-response">
+        <div class="ai-label" id="ai-label">Cleainput is Reading...</div>
+        <div class="ai-text" id="ai-text" style="display:none">I'm doing great, thank you for asking! What can I do for you today?</div>
+        <div class="ai-actions">
+          <!-- Retry -->
+          <button aria-label="Retry" id="retry-btn" class="btn-retry-disabled">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 4v6h6" stroke="#aaa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3.51 15a9 9 0 1 0 .49-4.95L1 10" stroke="#aaa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <!-- Thumbs up -->
+          <button aria-label="Like" id="like-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="none"><path d="M8.9929,5.16326 C9.16197,6.58609 8.93059,8.06959 8.41676,9.40186 C7.84825,10.8757 7.09175,12.4711 6.99818,14.0588 C6.91939,15.3959 7.22235,16.9777 8.03031,18.0606 C8.9152,19.2465 10.3675,20 11.9667,20 L13.4792,20 C16.0797,20 18.246,18.0067 18.462,15.4152 L18.823,11.083 C18.8716,10.5 18.4115,10 17.8264,10 L12.5,10 C11.6689,10 11.0047,9.32743 10.9985,8.50755 C10.9913,7.53778 11.0524,6.34084 10.6056,5.44721 C10.206,4.64792 9.83199,4.5 9.50003,4.5 C9.20032,4.5 8.9608,4.89307 8.9929,5.16326 Z M9.50003,2.5 C10.8556,2.5 11.7941,3.35208 12.3945,4.55279 C12.9168,5.59751 12.9661,6.85257 12.9915,8 L17.8264,8 C19.5815,8 20.9618,9.50008 20.8161,11.2491 L20.455,15.5813 C20.1527,19.2094 17.1199,22 13.4792,22 L11.9667,22 C9.99963,22 8.17139,21.1817 6.89975,19.8215 C6.45237,19.9382 5.98314,20.0001 5.5,20.0001 C4.39178,20.0001 3.47158,19.3791 2.87596,18.3917 C2.2969,17.4317 2,16.1066 2,14.5001 C2,12.8937 2.2969,11.5685 2.87596,10.6086 C3.47158,9.62116 4.39178,9.00012 5.5,9.00012 C5.78149,9.00012 6.07864,9.04963 6.37732,9.13358 C6.83483,7.93439 7.16111,6.69732 7.00687,5.39924 C6.83517,3.95421 8.01551,2.5 9.50003,2.5 Z M5.69583,11.0244 C5.21131,10.9241 4.83096,11.2397 4.5885,11.6416 C4.26275,12.1816 4,13.1064 4,14.5001 C4,15.8938 4.26275,16.8186 4.5885,17.3586 C4.89771,17.8712 5.22751,18.0001 5.5,18.0001 C5.56358,18.0001 5.62668,17.9985 5.68929,17.9952 C5.15387,16.7868 4.92419,15.2555 5.00164,13.9412 C5.04911,13.1357 5.36336,12.0232 5.69583,11.0244 Z" fill="#aaa"></path></svg>
+          </button>
+          <!-- Thumbs down -->
+          <button aria-label="Dislike" id="dislike-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="none"><path d="M8.9929,18.8367 C9.16197,17.4139 8.93059,15.9304 8.41676,14.5981 C7.84825,13.1243 7.09175,11.5289 6.99818,9.94117 C6.91939,8.6041 7.22235,7.02225 8.03031,5.93942 C8.9152,4.75349 10.3675,4 11.9667,4 L13.4792,4 C16.0797,4 18.246,5.99331 18.462,8.58477 L18.823,12.917 C18.8716,13.5 18.4115,14 17.8264,14 L12.5,14 C11.6689,14 11.0047,14.6726 10.9985,15.4925 C10.9913,16.4622 11.0524,17.6592 10.6056,18.5528 C10.206,19.3521 9.83199,19.5 9.50003,19.5 C9.20032,19.5 8.9608,19.1069 8.9929,18.8367 Z M9.50003,21.5 C10.8556,21.5 11.7941,20.6479 12.3945,19.4472 C12.9168,18.4025 12.9661,17.1474 12.9915,16 L17.8264,16 C19.5815,16 20.9618,14.4999 20.8161,12.7509 L20.455,8.41868 C20.1527,4.79063 17.1199,2 13.4792,2 L11.9667,2 C9.99963,2 8.17139,2.81832 6.89975,4.17854 C6.45237,4.06181 5.98314,3.99988 5.5,3.99988 C4.39178,3.99988 3.47158,4.62092 2.87596,5.60831 C2.2969,6.56825 2,7.89344 2,9.49988 C2,11.1063 2.2969,12.4315 2.87596,13.3914 C3.47158,14.3788 4.39178,14.9999 5.5,14.9999 C5.78149,14.9999 6.07864,14.9504 6.37732,14.8664 C6.83483,16.0656 7.16111,17.3027 7.00687,18.6008 C6.83517,20.0458 8.01551,21.5 9.50003,21.5 Z M5.69583,12.9756 C5.21131,13.0759 4.83096,12.7603 4.5885,12.3584 C4.26275,11.8184 4,10.8936 4,9.49988 C4,8.10619 4.26275,7.18138 4.5885,6.64136 C4.89771,6.12878 5.22751,5.99988 5.5,5.99988 C5.56358,5.99988 5.62668,6.00154 5.68929,6.00482 C5.15387,7.21322 4.92419,8.74453 5.00164,10.0588 C5.04911,10.8643 5.36336,11.9768 5.69583,12.9756 Z" fill="#aaa"></path></svg>
+          </button>
+          <!-- Copy -->
+          <button aria-label="Copy" id="ai-copy-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 11C6 8.17157 6 6.75736 6.87868 5.87868C7.75736 5 9.17157 5 12 5H15C17.8284 5 19.2426 5 20.1213 5.87868C21 6.75736 21 8.17157 21 11V16C21 18.8284 21 20.2426 20.1213 21.1213C19.2426 22 17.8284 22 15 22H12C9.17157 22 7.75736 22 6.87868 21.1213C6 20.2426 6 18.8284 6 16V11Z" stroke="#aaa" stroke-width="1.5"></path><path d="M6 19C4.34315 19 3 17.6569 3 16V10C3 6.22876 3 4.34315 4.17157 3.17157C5.34315 2 7.22876 2 11 2H15C16.6569 2 18 3.34315 18 5" stroke="#aaa" stroke-width="1.5"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-bar-wrapper">
+
+    <!-- Input -->
+    <div class="input-pill">
+      <div contenteditable="true" data-placeholder="Ask Cleainput anything" autofocus></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+
+      <!-- Atlas chip -->
+      <button class="chip">
+        <svg fill="#4a8cff" width="17" height="17" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 28.621 28.621" xml:space="preserve"><g><path d="M14.311,0c-6.904,0-12.5,5.596-12.5,12.5c0,4.723,2.618,8.828,6.48,10.955l-0.147,5.166l5.898-3.635C14.131,24.988,14.22,25,14.311,25c6.904,0,12.5-5.596,12.5-12.5C26.811,5.596,21.215,0,14.311,0z M13.75,20.018c-1.116,0-1.876-0.822-1.876-1.918c0-1.119,0.779-1.92,1.876-1.92c1.14,0,1.878,0.801,1.898,1.92C15.649,19.193,14.891,20.018,13.75,20.018z M16.301,12.173c-0.779,0.865-1.096,1.686-1.074,2.638v0.377h-2.805L12.4,14.641c-0.063-1.074,0.295-2.173,1.246-3.31c0.673-0.803,1.223-1.477,1.223-2.194c0-0.737-0.487-1.222-1.542-1.263c-0.693,0-1.539,0.251-2.084,0.632l-0.718-2.301c0.759-0.442,2.022-0.861,3.52-0.861c2.785,0,4.048,1.538,4.048,3.289C18.094,10.233,17.104,11.287,16.301,12.173z"></path></g></svg>
+        Atlas
+      </button>
+
+      <!-- Search chip -->
+      <button class="chip">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="9" stroke="#444" stroke-width="1.8"/>
+          <ellipse cx="12" cy="12" rx="3.5" ry="9" stroke="#444" stroke-width="1.8"/>
+          <line x1="3" y1="9" x2="21" y2="9" stroke="#444" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="3" y1="15" x2="21" y2="15" stroke="#444" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        Search
+      </button>
+
+      <div class="spacer"></div>
+
+      <!-- Plus button -->
+      <button class="btn-plus" aria-label="Attach">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="12" y1="5" x2="12" y2="19" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+          <line x1="5" y1="12" x2="19" y2="12" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <!-- Send button -->
+      <button class="btn-send" aria-label="Send">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 20V4M12 4L6 10M12 4L18 10" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+    </div>
+  </div>
+
+  <script>
+    // === Universal viewport height fix (works in ALL browsers) ===
+    function setVh() {
+      var vh = window.innerHeight;
+      document.body.style.height = vh + 'px';
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', function() {
+      setTimeout(setVh, 200);
+    });
+
+    // Playful thinking animation
+    const label = document.getElementById('ai-label');
+    const aiText = document.getElementById('ai-text');
+    const aiActions = document.querySelector('.ai-actions');
+
+    const states = [
+      { icon: '📖', text: 'Cleainput is Reading' },
+      { icon: '💡', text: 'Cleainput is Understanding' },
+    ];
+
+    function setLabel(icon, text, withDots) {
+      withDots = withDots !== false;
+      var dots = withDots ? '<span class="dot-wave"><span></span><span></span><span></span></span>' : '';
+      var iconHtml = icon ? '<span class="state-icon">' + icon + '</span>' : '';
+      label.innerHTML = iconHtml + '<span>' + text + '</span>' + dots;
+      label.className = 'ai-label' + (withDots ? ' active' : '');
+    }
+
+    function showExecuted() {
+      label.innerHTML = 'Executed';
+      label.className = 'ai-label';
+      setTimeout(() => {
+        aiText.style.display = '';
+        aiText.classList.add('visible');
+        aiActions.style.display = '';
+        setTimeout(() => aiActions.classList.add('visible'), 100);
+      }, 300);
+    }
+
+    aiText.style.display = 'none';
+    aiActions.style.display = 'none';
+
+    setLabel('', states[0].text);
+    setTimeout(() => {
+      setLabel('', states[1].text);
+      setTimeout(() => {
+        showExecuted();
+      }, 1400);
+    }, 1400);
+
+    // === Bubble Edit ===
+    var bubble = document.getElementById('user-bubble');
+    var editBtn = document.getElementById('bubble-edit-btn');
+    var editContainer = document.getElementById('bubble-edit-container');
+    var editTextarea = document.getElementById('bubble-edit-textarea');
+    var cancelBtn = document.getElementById('bubble-cancel-btn');
+    var saveBtn = document.getElementById('bubble-save-btn');
+
+    editBtn.addEventListener('click', function() {
+      editTextarea.value = bubble.textContent;
+      bubble.style.display = 'none';
+      document.querySelector('.message-actions').style.display = 'none';
+      editContainer.style.display = 'block';
+      editTextarea.focus();
+    });
+
+    cancelBtn.addEventListener('click', function() {
+      editContainer.style.display = 'none';
+      bubble.style.display = '';
+      document.querySelector('.message-actions').style.display = '';
+    });
+
+    saveBtn.addEventListener('click', function() {
+      var newText = editTextarea.value.trim();
+      if (newText) bubble.textContent = newText;
+      editContainer.style.display = 'none';
+      bubble.style.display = '';
+      document.querySelector('.message-actions').style.display = '';
+    });
+
+    // === Copy bubble text ===
+    document.getElementById('bubble-copy-btn').addEventListener('click', function() {
+      navigator.clipboard.writeText(bubble.textContent).catch(function(){});
+      this.style.opacity = '0.4';
+      var btn = this;
+      setTimeout(function(){ btn.style.opacity = ''; }, 800);
+    });
+
+    // === Copy AI text ===
+    document.getElementById('ai-copy-btn').addEventListener('click', function() {
+      var txt = document.getElementById('ai-text').textContent;
+      navigator.clipboard.writeText(txt).catch(function(){});
+      this.style.opacity = '0.4';
+      var btn = this;
+      setTimeout(function(){ btn.style.opacity = ''; }, 800);
+    });
+
+    // === Like / Dislike toggle ===
+    document.getElementById('like-btn').addEventListener('click', function() {
+      var active = this.dataset.active === '1';
+      this.dataset.active = active ? '0' : '1';
+      this.querySelector('path').setAttribute('fill', active ? '#aaa' : '#4a8cff');
+      document.getElementById('dislike-btn').dataset.active = '0';
+      document.getElementById('dislike-btn').querySelector('path').setAttribute('fill', '#aaa');
+    });
+
+    document.getElementById('dislike-btn').addEventListener('click', function() {
+      var active = this.dataset.active === '1';
+      this.dataset.active = active ? '0' : '1';
+      this.querySelector('path').setAttribute('fill', active ? '#aaa' : '#ff4a4a');
+      document.getElementById('like-btn').dataset.active = '0';
+      document.getElementById('like-btn').querySelector('path').setAttribute('fill', '#aaa');
+    });
+
+    // === Editor ===
+    const editor = document.querySelector('[contenteditable]');
+    editor.addEventListener('input', () => {
+      if (editor.innerHTML === '<br>' || editor.innerHTML === '') {
+        editor.innerHTML = '';
+      }
+    });
+    editor.addEventListener('blur', () => {
+      if (editor.innerHTML === '<br>' || editor.innerText.trim() === '') {
+        editor.innerHTML = '';
+      }
+    });
+  </script>
+</body>
+</html>
+
