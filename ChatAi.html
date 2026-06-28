@@ -409,12 +409,115 @@
       padding: 0;
     }
 
+    /* Markdown table */
+    .ai-text table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .ai-text th, .ai-text td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+      color: #222;
+      line-height: 1.5;
+    }
+    .ai-text th {
+      font-weight: 600;
+      color: #555;
+      font-size: 13px;
+      border-bottom: 1px solid #ddd;
+    }
+    .ai-text td code {
+      background: #f0f0f0;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+    .ai-text tr:last-child td { border-bottom: none; }
+
     /* Dimmed retry */
     .btn-retry-disabled {
       opacity: 0.35;
       cursor: not-allowed !important;
       pointer-events: none;
     }
+
+    /* Image preview strip inside input pill */
+    .image-preview-strip {
+      display: none;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-bottom: 10px;
+    }
+    .image-preview-strip.has-images { display: flex; }
+
+    .img-thumb {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      border-radius: 10px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .img-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .img-thumb .remove-img {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.55);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+    }
+    .img-thumb .remove-img svg { display: block; }
+
+    /* Scroll buttons */
+    .scroll-btns {
+      position: fixed;
+      right: 14px;
+      bottom: 160px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 20;
+    }
+
+    .scroll-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #fff;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .scroll-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .scroll-btn:active { transform: scale(0.92); }
   </style>
 </head>
 <body>
@@ -429,6 +532,20 @@
       </svg>
     </button>
   </header>
+
+  <!-- Floating scroll buttons -->
+  <div class="scroll-btns">
+    <button class="scroll-btn" id="scroll-top-btn" aria-label="Scroll to top">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 19V5M12 5L6 11M12 5L18 11" stroke="#555" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="scroll-btn" id="scroll-bottom-btn" aria-label="Scroll to bottom">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 5V19M12 19L6 13M12 19L18 13" stroke="#555" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
 
   <!-- Message area -->
   <div class="message-area">
@@ -479,9 +596,15 @@
 
   <div class="chat-bar-wrapper">
 
+    <!-- Hidden file input -->
+    <input type="file" id="img-file-input" accept="image/*" multiple style="display:none">
+
     <!-- Input -->
     <div class="input-pill">
-      <div contenteditable="true" data-placeholder="Ask Cleainput anything" autofocus></div>
+      <div style="display:flex; flex-direction:column; flex:1; gap:0;">
+        <div class="image-preview-strip" id="image-preview-strip"></div>
+        <div contenteditable="true" data-placeholder="Ask Cleainput anything" autofocus></div>
+      </div>
     </div>
 
     <!-- Toolbar -->
@@ -527,7 +650,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
   <script>
     // === Smart markdown renderer ===
-    // Detects if response is research/detailed and renders markdown,
+    marked.setOptions({ gfm: true, breaks: true });
+
     // otherwise shows plain text like a casual chat reply.
     function isResearchResponse(text) {
       var signals = 0;
@@ -535,6 +659,7 @@
       if (/\*\*[^*]+\*\*/.test(text)) signals += 2;      // has bold
       if (/^\s*[-*]\s/m.test(text)) signals += 2;        // has bullet list
       if (/^\s*\d+\.\s/m.test(text)) signals += 2;       // has numbered list
+      if (/\|.+\|/.test(text)) signals += 3;             // has table
       if (text.split('\n').length > 6) signals += 1;     // multi-line
       if (text.length > 300) signals += 1;               // long response
       return signals >= 3;
@@ -549,6 +674,74 @@
         el.textContent = text;
       }
     }
+
+    // === Image Upload ===
+    var fileInput = document.getElementById('img-file-input');
+    var previewStrip = document.getElementById('image-preview-strip');
+    var plusBtn = document.querySelector('.btn-plus');
+
+    plusBtn.addEventListener('click', function() {
+      fileInput.value = '';
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function() {
+      var files = Array.from(fileInput.files);
+      files.forEach(function(file) {
+        if (!file.type.startsWith('image/')) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          addImageThumb(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    function addImageThumb(src) {
+      var thumb = document.createElement('div');
+      thumb.className = 'img-thumb';
+      thumb.innerHTML =
+        '<img src="' + src + '" alt="upload">' +
+        '<button class="remove-img" aria-label="Remove">' +
+          '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+            '<line x1="1" y1="1" x2="11" y2="11" stroke="white" stroke-width="2" stroke-linecap="round"/>' +
+            '<line x1="11" y1="1" x2="1" y2="11" stroke="white" stroke-width="2" stroke-linecap="round"/>' +
+          '</svg>' +
+        '</button>';
+      thumb.querySelector('.remove-img').addEventListener('click', function() {
+        thumb.remove();
+        if (previewStrip.children.length === 0) {
+          previewStrip.classList.remove('has-images');
+        }
+      });
+      previewStrip.appendChild(thumb);
+      previewStrip.classList.add('has-images');
+    }
+
+    // === Scroll buttons ===
+    var msgArea = document.querySelector('.message-area');
+    var scrollTopBtn = document.getElementById('scroll-top-btn');
+    var scrollBottomBtn = document.getElementById('scroll-bottom-btn');
+
+    function updateScrollBtns() {
+      var st = msgArea.scrollTop;
+      var maxScroll = msgArea.scrollHeight - msgArea.clientHeight;
+      // Show "up" only if not at top
+      scrollTopBtn.classList.toggle('visible', st > 60);
+      // Show "down" only if not at bottom
+      scrollBottomBtn.classList.toggle('visible', maxScroll - st > 60);
+    }
+
+    msgArea.addEventListener('scroll', updateScrollBtns);
+    updateScrollBtns();
+
+    scrollTopBtn.addEventListener('click', function() {
+      msgArea.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    scrollBottomBtn.addEventListener('click', function() {
+      msgArea.scrollTo({ top: msgArea.scrollHeight, behavior: 'smooth' });
+    });
 
     // Playful thinking animation
     const label = document.getElementById('ai-label');
@@ -671,4 +864,5 @@
   </script>
 </body>
 </html>
+
 
